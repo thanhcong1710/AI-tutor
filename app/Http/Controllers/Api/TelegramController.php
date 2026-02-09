@@ -24,6 +24,9 @@ class TelegramController extends Controller
      */
     public function handleWebhook(Request $request)
     {
+        Log::info('--- Telegram Webhook HIT ---');
+        Log::info('Payload:', $request->all());
+
         try {
             // Returns Update object
             $update = Telegram::commandsHandler(true);
