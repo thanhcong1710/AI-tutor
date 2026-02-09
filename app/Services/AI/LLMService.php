@@ -2,25 +2,22 @@
 
 namespace App\Services\AI;
 
-use OpenAI\Laravel\Facades\OpenAI;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class LLMService
 {
-    protected string $model;
-    protected int $maxTokens;
-    protected float $temperature;
-
     public function __construct()
     {
-        $this->model = config('ai_tutor.openai.model', 'gpt-4o');
-        $this->maxTokens = config('ai_tutor.openai.max_tokens', 2000);
-        $this->temperature = config('ai_tutor.openai.temperature', 0.7);
+        // Configs are loaded dynamically in chat methods to support runtime changes
     }
 
-    /**
-     * Generate lesson explanation from content
-     */
+    public function explainConcept(string $concept, string $context = 'General'): array
+    {
+        $explanation = $this->generateExplanation($concept, $context, 'Beginner');
+        return ['content' => $explanation];
+    }
+
     public function generateExplanation(string $content, string $subject, string $level): string
     {
         $prompt = "You are an expert {$subject} tutor teaching at {$level} level. 
@@ -38,9 +35,6 @@ Provide a detailed explanation that:
         return $this->chat($prompt);
     }
 
-    /**
-     * Generate questions from content
-     */
     public function generateQuestions(string $content, int $count = 5, string $difficulty = 'medium'): array
     {
         $prompt = "Based on the following content, generate {$count} {$difficulty} difficulty questions.
@@ -55,7 +49,7 @@ For each question, provide:
 4. Correct answer
 5. Explanation of why this is the correct answer
 
-Return the response as a JSON array of questions with this structure:
+Return the response as a JSON array of questions with this structure ONLY (no markdown code blocks):
 [
   {
     \"question\": \"...\",
@@ -67,6 +61,7 @@ Return the response as a JSON array of questions with this structure:
 ]";
 
         $response = $this->chat($prompt);
+        $response = $this->cleanJson($response);
 
         try {
             return json_decode($response, true) ?? [];
@@ -76,9 +71,6 @@ Return the response as a JSON array of questions with this structure:
         }
     }
 
-    /**
-     * Evaluate student answer
-     */
     public function evaluateAnswer(string $question, string $correctAnswer, string $studentAnswer): array
     {
         $prompt = "You are evaluating a student's answer.
@@ -93,7 +85,7 @@ Evaluate the student's answer and provide:
 3. feedback (string): Constructive feedback for the student
 4. suggestions (string): What the student should focus on
 
-Return as JSON:
+Return as JSON ONLY (no markdown code blocks):
 {
   \"is_correct\": true/false,
   \"score\": 0-100,
@@ -102,6 +94,7 @@ Return as JSON:
 }";
 
         $response = $this->chat($prompt);
+        $response = $this->cleanJson($response);
 
         try {
             return json_decode($response, true) ?? [
@@ -121,9 +114,6 @@ Return as JSON:
         }
     }
 
-    /**
-     * Analyze student performance and identify strengths/weaknesses
-     */
     public function analyzePerformance(array $sessionData): array
     {
         $prompt = "Analyze this student's learning performance:
@@ -136,7 +126,7 @@ Provide:
 3. recommendations: Array of specific recommendations
 4. learning_pace: 'fast', 'medium', or 'slow'
 
-Return as JSON:
+Return as JSON ONLY (no markdown code blocks):
 {
   \"strengths\": [...],
   \"weaknesses\": [...],
@@ -145,6 +135,7 @@ Return as JSON:
 }";
 
         $response = $this->chat($prompt);
+        $response = $this->cleanJson($response);
 
         try {
             return json_decode($response, true) ?? [];
@@ -154,25 +145,77 @@ Return as JSON:
         }
     }
 
+    protected function cleanJson(string $response): string
+    {
+        return str_replace(['```json', '```'], '', $response);
+    }
+
     /**
-     * Base chat method
+     * Hybrid Chat: Gemini Primary -> OpenAI Backup
      */
     protected function chat(string $prompt, array $options = []): string
     {
-        try {
-            $result = OpenAI::chat()->create([
-                'model' => $options['model'] ?? $this->model,
-                'messages' => [
-                    ['role' => 'user', 'content' => $prompt],
-                ],
-                'max_tokens' => $options['max_tokens'] ?? $this->maxTokens,
-                'temperature' => $options['temperature'] ?? $this->temperature,
-            ]);
-
-            return $result->choices[0]->message->content ?? '';
-        } catch (\Exception $e) {
-            Log::error('OpenAI API error', ['error' => $e->getMessage()]);
-            throw $e;
+        // 1. Try Gemini (Primary)
+        if (config('services.gemini.api_key')) {
+            try {
+                $response = $this->chatWithGemini($prompt, $options);
+                if (!empty($response)) {
+                    return $response;
+                }
+            } catch (\Exception $e) {
+                Log::warning('Gemini Primary Failed', ['error' => $e->getMessage()]);
+            }
         }
+
+        // 2. Fallback to OpenAI (Backup)
+        if (config('services.openai.api_key')) {
+            Log::info('Switching to OpenAI Backup...');
+            return $this->chatWithOpenAI($prompt, $options);
+        }
+
+        return "I'm having trouble thinking right now. Please check my AI configuration.";
+    }
+
+    protected function chatWithGemini(string $prompt, array $options = []): string
+    {
+        $apiKey = config('services.gemini.api_key');
+        $model = config('services.gemini.model', 'gemini-2.5-flash');
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+
+        $response = Http::post($url, [
+            'contents' => [['parts' => [['text' => $prompt]]]],
+            'generationConfig' => [
+                'temperature' => $options['temperature'] ?? 0.7,
+                'maxOutputTokens' => $options['max_tokens'] ?? 2000,
+            ]
+        ]);
+
+        if ($response->failed()) {
+            throw new \Exception("Gemini Error " . $response->status() . ": " . $response->body());
+        }
+
+        return $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '';
+    }
+
+    protected function chatWithOpenAI(string $prompt, array $options = []): string
+    {
+        $apiKey = config('services.openai.api_key');
+        $model = config('services.openai.model', 'gpt-4o');
+
+        $response = Http::withToken($apiKey)->post('https://api.openai.com/v1/chat/completions', [
+            'model' => $model,
+            'messages' => [
+                ['role' => 'user', 'content' => $prompt]
+            ],
+            'temperature' => $options['temperature'] ?? 0.7,
+            'max_tokens' => $options['max_tokens'] ?? 2000,
+        ]);
+
+        if ($response->failed()) {
+            Log::error('OpenAI Backup Failed', ['status' => $response->status(), 'body' => $response->body()]);
+            return "Error from OpenAI Backup.";
+        }
+
+        return $response->json()['choices'][0]['message']['content'] ?? '';
     }
 }

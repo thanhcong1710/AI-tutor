@@ -18,6 +18,9 @@ Route::get('/health', function () {
 Route::post('/login', [App\Http\Controllers\Api\AuthController::class, 'login']);
 Route::post('/register', [App\Http\Controllers\Api\AuthController::class, 'register']);
 
+// Telegram Webhook
+Route::post('/telegram/webhook', [App\Http\Controllers\Api\TelegramController::class, 'handleWebhook']);
+
 // Protected routes (require authentication)
 Route::middleware('auth:sanctum')->group(function () {
 
