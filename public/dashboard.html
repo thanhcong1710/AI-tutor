@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - AI Tutor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="app">
+        <!-- Sidebar -->
+        <div class="flex h-screen">
+            <div class="w-64 gradient-bg text-white p-6">
+                <div class="flex items-center space-x-2 mb-8">
+                    <i class="fas fa-robot text-3xl"></i>
+                    <span class="text-2xl font-bold">AI Tutor</span>
+                </div>
+                
+                <nav class="space-y-2">
+                    <a href="#" @click="currentView = 'dashboard'" :class="currentView === 'dashboard' ? 'bg-white bg-opacity-20' : ''" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 transition">
+                        <i class="fas fa-home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="#" @click="currentView = 'lessons'" :class="currentView === 'lessons' ? 'bg-white bg-opacity-20' : ''" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 transition">
+                        <i class="fas fa-book"></i>
+                        <span>My Lessons</span>
+                    </a>
+                    <a href="#" @click="currentView = 'progress'" :class="currentView === 'progress' ? 'bg-white bg-opacity-20' : ''" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 transition">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Progress</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 transition">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                </nav>
+
+                <div class="mt-auto pt-8">
+                    <div class="bg-white bg-opacity-10 rounded-lg p-4">
+                        <div class="flex items-center space-x-3 mb-2">
+                            <div class="w-10 h-10 bg-purple-300 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user text-purple-800"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold">{{ student.name }}</div>
+                                <div class="text-xs text-purple-200">Free Plan</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="flex-1 overflow-y-auto">
+                <!-- Header -->
+                <div class="bg-white shadow-sm px-8 py-4">
+                    <div class="flex items-center justify-between">
+                        <h1 class="text-2xl font-bold gradient-text">{{ getTitle() }}</h1>
+                        <div class="flex items-center space-x-4">
+                            <div class="flex items-center space-x-2 text-sm">
+                                <i class="fas fa-fire text-orange-500"></i>
+                                <span class="font-semibold">{{ stats.streak }} day streak</span>
+                            </div>
+                            <button class="px-4 py-2 gradient-bg text-white rounded-lg font-semibold hover:opacity-90">
+                                <i class="fas fa-crown mr-2"></i>
+                                Upgrade to Premium
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard View -->
+                <div v-if="currentView === 'dashboard'" class="p-8">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white p-6 rounded-xl shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-600 text-sm">Total Sessions</p>
+                                    <p class="text-3xl font-bold gradient-text">{{ stats.totalSessions }}</p>
+                                </div>
+                                <div class="w-12 h-12 gradient-bg rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-book-open text-white text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-600 text-sm">Average Score</p>
+                                    <p class="text-3xl font-bold gradient-text">{{ stats.avgScore }}%</p>
+                                </div>
+                                <div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-chart-line text-white text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-600 text-sm">Time Spent</p>
+                                    <p class="text-3xl font-bold gradient-text">{{ stats.timeSpent }}h</p>
+                                </div>
+                                <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-clock text-white text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-600 text-sm">Streak Days</p>
+                                    <p class="text-3xl font-bold gradient-text">{{ stats.streak }}</p>
+                                </div>
+                                <div class="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-fire text-white text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Assigned Lessons -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
+                        <h2 class="text-xl font-bold mb-4">Assigned Lessons</h2>
+                        <div class="space-y-4">
+                            <div v-for="lesson in assignedLessons" :key="lesson.id" class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-purple-300 transition">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-12 h-12 gradient-bg rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-book text-white"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold">{{ lesson.title }}</h3>
+                                        <p class="text-sm text-gray-600">{{ lesson.subject }} • {{ lesson.level }}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-4">
+                                    <div class="text-right">
+                                        <p class="text-sm text-gray-600">Due: {{ lesson.dueDate }}</p>
+                                        <span :class="lesson.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" class="text-xs px-2 py-1 rounded-full">
+                                            {{ lesson.status }}
+                                        </span>
+                                    </div>
+                                    <button class="px-4 py-2 gradient-bg text-white rounded-lg font-semibold hover:opacity-90">
+                                        {{ lesson.status === 'completed' ? 'Review' : 'Start' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Chart -->
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h2 class="text-xl font-bold mb-4">Learning Progress</h2>
+                        <canvas id="progressChart" height="80"></canvas>
+                    </div>
+                </div>
+
+                <!-- Lessons View -->
+                <div v-if="currentView === 'lessons'" class="p-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div v-for="lesson in assignedLessons" :key="lesson.id" class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition">
+                            <div class="gradient-bg h-32 flex items-center justify-center">
+                                <i class="fas fa-book text-white text-5xl"></i>
+                            </div>
+                            <div class="p-6">
+                                <h3 class="font-bold text-lg mb-2">{{ lesson.title }}</h3>
+                                <p class="text-gray-600 text-sm mb-4">{{ lesson.description }}</p>
+                                <div class="flex items-center justify-between text-sm text-gray-600 mb-4">
+                                    <span><i class="fas fa-clock mr-1"></i>{{ lesson.duration }} min</span>
+                                    <span><i class="fas fa-signal mr-1"></i>{{ lesson.level }}</span>
+                                </div>
+                                <button class="w-full gradient-bg text-white py-2 rounded-lg font-semibold hover:opacity-90">
+                                    Start Learning
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress View -->
+                <div v-if="currentView === 'progress'" class="p-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Strengths -->
+                        <div class="bg-white rounded-xl shadow-sm p-6">
+                            <h2 class="text-xl font-bold mb-4 flex items-center">
+                                <i class="fas fa-star text-yellow-500 mr-2"></i>
+                                Strengths
+                            </h2>
+                            <div class="space-y-2">
+                                <div v-for="strength in strengths" :key="strength" class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                    <span>{{ strength }}</span>
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Weaknesses -->
+                        <div class="bg-white rounded-xl shadow-sm p-6">
+                            <h2 class="text-xl font-bold mb-4 flex items-center">
+                                <i class="fas fa-exclamation-triangle text-orange-500 mr-2"></i>
+                                Areas to Improve
+                            </h2>
+                            <div class="space-y-2">
+                                <div v-for="weakness in weaknesses" :key="weakness" class="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                                    <span>{{ weakness }}</span>
+                                    <i class="fas fa-arrow-up text-orange-500"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    currentView: 'dashboard',
+                    student: {
+                        name: 'Alice Student',
+                        email: 'student@aitutor.com'
+                    },
+                    stats: {
+                        totalSessions: 1,
+                        avgScore: 75,
+                        timeSpent: 0.3,
+                        streak: 1
+                    },
+                    assignedLessons: [
+                        {
+                            id: 1,
+                            title: 'English Grammar: Present Simple Tense',
+                            description: 'Learn the basics of Present Simple tense',
+                            subject: 'English',
+                            level: 'Beginner',
+                            duration: 30,
+                            dueDate: 'Feb 16, 2026',
+                            status: 'assigned'
+                        },
+                        {
+                            id: 2,
+                            title: 'Basic Math: Addition and Subtraction',
+                            description: 'Master the fundamentals of addition',
+                            subject: 'Math',
+                            level: 'Beginner',
+                            duration: 25,
+                            dueDate: 'Feb 14, 2026',
+                            status: 'assigned'
+                        }
+                    ],
+                    strengths: ['Present Simple basics', 'Verb conjugation'],
+                    weaknesses: ['Complex sentences']
+                }
+            },
+            methods: {
+                getTitle() {
+                    const titles = {
+                        dashboard: 'Dashboard',
+                        lessons: 'My Lessons',
+                        progress: 'My Progress'
+                    };
+                    return titles[this.currentView] || 'Dashboard';
+                }
+            },
+            mounted() {
+                // Create progress chart
+                const ctx = document.getElementById('progressChart');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                            label: 'Score %',
+                            data: [65, 70, 75, 72, 78, 80, 75],
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

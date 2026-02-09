@@ -21,6 +21,16 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
+        'platform',
+        'platform_id',
+        'phone',
+        'date_of_birth',
+        'subscription_type',
+        'subscription_expires_at',
+        'free_minutes_used_today',
+        'free_minutes_reset_date',
+        'preferences',
     ];
 
     /**
@@ -43,6 +53,10 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'preferences' => 'array',
+            'date_of_birth' => 'date',
+            'subscription_expires_at' => 'datetime',
+            'free_minutes_reset_date' => 'date',
         ];
     }
 }
