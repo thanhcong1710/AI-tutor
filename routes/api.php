@@ -15,9 +15,13 @@ use App\Http\Controllers\Api\StudentController;
 Route::get('/health', function () {
     return response()->json(['status' => 'ok', 'timestamp' => now()]);
 });
+Route::post('/login', [App\Http\Controllers\Api\AuthController::class, 'login']);
+Route::post('/register', [App\Http\Controllers\Api\AuthController::class, 'register']);
 
 // Protected routes (require authentication)
 Route::middleware('auth:sanctum')->group(function () {
+
+    Route::post('/logout', [App\Http\Controllers\Api\AuthController::class, 'logout']);
 
     // Get authenticated user
     Route::get('/user', function (Request $request) {
