@@ -23,6 +23,8 @@ class User extends Authenticatable
         'password',
         'role',
         'platform',
+        'telegram_id',
+        'language',
         'platform_id',
         'phone',
         'date_of_birth',

@@ -12,17 +12,34 @@ class LLMService
         // Configs are loaded dynamically in chat methods to support runtime changes
     }
 
-    public function explainConcept(string $concept, string $context = 'General'): array
+    public function explainConcept(string $concept, string $context = 'General', string $language = 'vi'): array
     {
-        $explanation = $this->generateExplanation($concept, $context, 'Beginner');
+        $explanation = $this->generateExplanation($concept, $context, 'Beginner', $language);
         return ['content' => $explanation];
     }
 
-    public function generateExplanation(string $content, string $subject, string $level): string
+    public function chatWithContext(string $message, string $contextData, string $language = 'vi'): array
     {
+        $langInstruction = $language === 'vi' ? 'Answer in Vietnamese.' : 'Answer in English.';
+
+        $prompt = "You are an AI Tutor. The student is currently studying this material:\n\n"
+            . "--- CONTEXT START ---\n{$contextData}\n--- CONTEXT END ---\n\n"
+            . "User Question: {$message}\n\n"
+            . "Please answer the question based on the context provided. If the question is unrelated, answer generally but mention the current lesson context if relevant.\n"
+            . "{$langInstruction}";
+
+        $response = $this->chat($prompt);
+        return ['content' => $response];
+    }
+
+    public function generateExplanation(string $content, string $subject, string $level, string $language = 'vi'): string
+    {
+        $langInstruction = $language === 'vi' ? 'Answer in Vietnamese.' : 'Answer in English.';
+
         $prompt = "You are an expert {$subject} tutor teaching at {$level} level. 
         
-Explain the following content in a clear, engaging way suitable for {$level} students:
+Explain the following content in a clear, engaging way suitable for {$level} students.
+{$langInstruction}
 
 {$content}
 

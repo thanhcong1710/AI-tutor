@@ -62,6 +62,9 @@ return [
     'commands' => [
         Telegram\Bot\Commands\HelpCommand::class,
         App\Telegram\Commands\StartCommand::class, // Added Start Command
+        App\Telegram\Commands\LangCommand::class, // Added Lang Command
+        App\Telegram\Commands\ListLessonsCommand::class, // Added List Lessons
+        App\Telegram\Commands\LearnCommand::class, // Added Learn Command
     ],
 
     /*

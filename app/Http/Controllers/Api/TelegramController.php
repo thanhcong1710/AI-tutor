@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Telegram\Bot\Laravel\Facades\Telegram;
 use App\Models\User;
+use App\Models\AiChatLog;
 use App\Services\AI\LLMService;
 use Illuminate\Support\Facades\Log;
 
@@ -24,6 +25,7 @@ class TelegramController extends Controller
     public function handleWebhook(Request $request)
     {
         try {
+            // Returns Update object
             $update = Telegram::commandsHandler(true);
 
             // If it's a command, it's already handled. If not, handle as text message.
@@ -46,16 +48,28 @@ class TelegramController extends Controller
         $message = $update->getMessage();
         $text = $message->getText();
         $chatId = $message->getChat()->getId();
-        $username = $message->getFrom()->getUsername();
+        $telegramUserId = $message->getFrom()->getId();
 
-        // Check if it's a command (starts with /) - handled by SDK automatically usually, 
-        // but we add a check just in case commandsHandler didn't catch it or for custom logic.
+        // Check if it's a command (starts with /)
         if (strpos($text, '/') === 0) {
             return;
         }
 
-        // Find or create user based on Telegram ID (optional logic)
-        // For now, we just reply using AI.
+        // 1. Find User
+        $user = User::where('telegram_id', $telegramUserId)->first();
+
+        // 2. Log User Message
+        try {
+            AiChatLog::create([
+                'user_id' => $user ? $user->id : null,
+                'platform' => 'telegram',
+                'platform_chat_id' => $chatId,
+                'role' => 'user',
+                'message' => $text,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to log user message: ' . $e->getMessage());
+        }
 
         Telegram::sendChatAction([
             'chat_id' => $chatId,
@@ -63,23 +77,61 @@ class TelegramController extends Controller
         ]);
 
         try {
-            // Use LLM Service to generate response
-            // We can provide some context about the user or previous conversation here if needed.
-            $systemPrompt = "You are an AI Tutor helper on Telegram. Keep your answers concise, helpful, and friendly. The user is asking via a chat interface.";
+            // 3. Determine Context & Generate AI Response
+            $language = $user->language ?? 'vi';
 
-            // Simulating AI response for now if LLMService is complex, but calling it directly:
-            // $aiResponse = $this->llmService->generateResponse($text, $systemPrompt); 
-            // For stability in this step, let's use a direct mock or real call:
+            // Find active session
+            $activeSession = \App\Models\LearningSession::with('lesson.segments')
+                ->where('student_id', $user ? $user->id : 0)
+                ->where('status', 'in_progress')
+                ->latest('updated_at')
+                ->first();
 
-            $aiResponse = $this->llmService->explainConcept($text, 'General Knowledge');
+            if ($activeSession && $activeSession->lesson) {
+                // Prepare Context from Lesson
+                $lesson = $activeSession->lesson;
+                $contextData = "Current Lesson: {$lesson->title} ({$lesson->subject} - {$lesson->level})\n";
+
+                $segment = $activeSession->current_segment_id
+                    ? $lesson->segments->where('id', $activeSession->current_segment_id)->first()
+                    : null;
+
+                if ($segment) {
+                    $contextData .= "Topic: {$segment->title}\n";
+                    $contextData .= "Content:\n" . substr($segment->content, 0, 1500) . "...";
+                } else {
+                    $contextData .= "Overview:\n" . substr($lesson->content ?? $lesson->description, 0, 1500) . "...";
+                }
+
+                $aiResponse = $this->llmService->chatWithContext($text, $contextData, $language);
+            } else {
+                // General Chat (No active lesson)
+                $aiResponse = $this->llmService->explainConcept($text, 'General Chat', $language);
+            }
+
+            $replyText = $aiResponse['content'] ?? "I'm thinking...";
+
+            // 4. Log AI Response
+            try {
+                AiChatLog::create([
+                    'user_id' => $user ? $user->id : null,
+                    'platform' => 'telegram',
+                    'platform_chat_id' => $chatId,
+                    'role' => 'assistant',
+                    'message' => $replyText,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to log AI message: ' . $e->getMessage());
+            }
 
             Telegram::sendMessage([
                 'chat_id' => $chatId,
-                'text' => $aiResponse['content'] ?? "I'm thinking...",
+                'text' => $replyText,
                 'parse_mode' => 'Markdown'
             ]);
 
         } catch (\Exception $e) {
+            Log::error('AI Response Error: ' . $e->getMessage());
             Telegram::sendMessage([
                 'chat_id' => $chatId,
                 'text' => "Sorry, I encountered an error creating a response. Please try again."
