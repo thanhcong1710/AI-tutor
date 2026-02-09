@@ -17,7 +17,7 @@ class StartCommand extends Command
     /**
      * @var string Command Description
      */
-    protected string $description = 'Start using AI Tutor Bot';
+    protected string $description = 'Start using AI Tutor Bot. Usage: /start [email]';
 
     /**
      * {@inheritdoc}
@@ -25,53 +25,67 @@ class StartCommand extends Command
     public function handle()
     {
         $message = $this->getUpdate()->getMessage();
-        $chatId = $message->getChat()->getId();
-        $username = $message->getFrom()->getUsername();
-        $firstName = $message->getFrom()->getFirstName();
+        $text = $message->getText();
         $telegramId = $message->getFrom()->getId();
+        $firstName = $message->getFrom()->getFirstName();
 
-        // 1. Check if user exists
+        // 1. Check if Telegram ID is already linked
         $user = User::where('telegram_id', $telegramId)->first();
 
-        if (!$user) {
-            // Create user for Telegram platform
-            $user = User::create([
-                'name' => $firstName . ' ' . $message->getFrom()->getLastName(),
-                'email' => strtolower($username ?? Str::random(8)) . '@telegram.user', // Placeholder email
-                'password' => bcrypt(Str::random(16)),
-                'telegram_id' => $telegramId,
-                'role' => 'student',
-                'platform' => 'telegram',
-                'subscription_type' => 'free',
+        if ($user) {
+            $this->replyWithMessage([
+                'text' => "👋 Welcome back, **{$user->name}**!\nRole: `{$user->role}`\n\nType /lessons to see available lessons.",
+                'parse_mode' => 'Markdown',
             ]);
-
-            $firstTime = true;
-        } else {
-            $firstTime = false;
+            return;
         }
 
-        // 2. Reply to user
-        $replyText = "👋 Hello, {$firstName}!\n\n";
+        // 2. Parse Email from command: /start email@example.com
+        // /start or /start email
+        $parts = preg_split('/\s+/', trim($text));
+        $email = $parts[1] ?? null;
 
-        if ($firstTime) {
-            $replyText .= "Welcome to **AI Tutor**! 🎓\n";
-            $replyText .= "I have created a student account for you.\n\n";
-        } else {
-            $replyText .= "Welcome back to **AI Tutor**! 🎓\n";
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->replyWithMessage([
+                'text' => "⚠️ **Account Not Linked!**\n\nTo use this bot, please link your website account by typing:\n`/start your_email@example.com`\n\nExample:\n`/start student@example.com`",
+                'parse_mode' => 'Markdown',
+            ]);
+            return;
         }
 
-        $replyText .= "Here's what I can do:\n";
-        $replyText .= "📚 Send me study topics, and I'll explain them.\n";
-        $replyText .= "📝 Ask for quizzes or practice questions.\n";
-        $replyText .= "🗣️ Send voice messages, and I'll transcribe and answer!\n\n";
-        $replyText .= "Type anything to start learning!";
+        // 3. Find User by Email
+        $user = User::where('email', $email)->first();
+
+        if (!$user) {
+            $this->replyWithMessage([
+                'text' => "❌ Email `{$email}` not found.\nPlease register on the website first or check your spelling.",
+                'parse_mode' => 'Markdown',
+            ]);
+            return;
+        }
+
+        // 4. Verification / Linking
+        // Check if this user is already linked to another Telegram ID?
+        if ($user->telegram_id && $user->telegram_id != $telegramId) {
+            $this->replyWithMessage([
+                'text' => "❌ This email is already linked to another Telegram account.\nPlease contact support if this is an error."
+            ]);
+            return;
+        }
+
+        // Update User
+        $user->telegram_id = $telegramId;
+        // Keep original platform or update? Maybe just add telegram_id is enough.
+        // But we might want to know they are active on telegram.
+        // $user->platform = 'telegram'; // Don't overwrite if they are web user primarily
+        $user->save();
 
         $this->replyWithMessage([
-            'text' => $replyText,
+            'text' => "✅ **Account Linked Successfully!**\n\nHello **{$user->name}** ({$user->role})!\nYou can now use the AI Tutor Bot.\n\nType /lessons to view lessons.",
             'parse_mode' => 'Markdown',
         ]);
 
-        // Trigger a simple menu or typing action
+        // Optional: Send typing action
         $this->replyWithChatAction(['action' => 'typing']);
     }
 }
