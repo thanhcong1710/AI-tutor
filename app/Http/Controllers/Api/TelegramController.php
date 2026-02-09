@@ -57,13 +57,15 @@ class TelegramController extends Controller
 
         // 1. Find User
         $user = User::where('telegram_id', $telegramUserId)->first();
+        Log::info("Telegram User ID: $telegramUserId found linked User ID: " . ($user ? $user->id : 'None'));
 
         // 2. Log User Message
         try {
+            Log::info("Logging User Message: " . substr($text, 0, 50));
             AiChatLog::create([
                 'user_id' => $user ? $user->id : null,
                 'platform' => 'telegram',
-                'platform_chat_id' => $chatId,
+                'platform_chat_id' => (string) $chatId,
                 'role' => 'user',
                 'message' => $text,
             ]);
@@ -78,6 +80,8 @@ class TelegramController extends Controller
 
         try {
             // 3. Determine Context & Generate AI Response
+            Log::info("Generating AI Response...");
+            $startTime = microtime(true);
             $language = $user->language ?? 'vi';
 
             // Find active session
@@ -88,6 +92,7 @@ class TelegramController extends Controller
                 ->first();
 
             if ($activeSession && $activeSession->lesson) {
+                Log::info("Active Session Found: Lesson ID " . $activeSession->lesson->id);
                 // Prepare Context from Lesson
                 $lesson = $activeSession->lesson;
                 $contextData = "Current Lesson: {$lesson->title} ({$lesson->subject} - {$lesson->level})\n";
@@ -105,21 +110,32 @@ class TelegramController extends Controller
 
                 $aiResponse = $this->llmService->chatWithContext($text, $contextData, $language);
             } else {
+                Log::info("No Active Session. Promoting General Chat.");
                 // General Chat (No active lesson)
                 $aiResponse = $this->llmService->explainConcept($text, 'General Chat', $language);
             }
 
             $replyText = $aiResponse['content'] ?? "I'm thinking...";
+            $duration = microtime(true) - $startTime;
+            Log::info("AI Generated Response (Length: " . strlen($replyText) . ") in " . round($duration, 2) . "s");
 
             // 4. Log AI Response
             try {
                 AiChatLog::create([
                     'user_id' => $user ? $user->id : null,
                     'platform' => 'telegram',
-                    'platform_chat_id' => $chatId,
+                    'platform_chat_id' => (string) $chatId,
                     'role' => 'assistant',
                     'message' => $replyText,
+                    'metadata' => [
+                        'processing_time' => round($duration, 2),
+                        'context_type' => ($activeSession && $activeSession->lesson) ? 'lesson' : 'general',
+                        'lesson_id' => ($activeSession && $activeSession->lesson) ? $activeSession->lesson->id : null,
+                        'language' => $language,
+                        'model' => config('services.gemini.model', 'unknown'),
+                    ]
                 ]);
+                Log::info("AI Response Logged to Database with Metadata.");
             } catch (\Exception $e) {
                 Log::error('Failed to log AI message: ' . $e->getMessage());
             }
@@ -131,7 +147,7 @@ class TelegramController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('AI Response Error: ' . $e->getMessage());
+            Log::error('AI Response Error or Telegram Send Error: ' . $e->getMessage());
             Telegram::sendMessage([
                 'chat_id' => $chatId,
                 'text' => "Sorry, I encountered an error creating a response. Please try again."
