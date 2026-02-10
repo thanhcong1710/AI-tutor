@@ -69,7 +69,8 @@
                         </div>
 
                         <h3 class="mt-4 text-xl font-bold text-gray-900 leading-tight">
-                            <a href="{{ route('lessons.telegram', $lesson->id) }}" class="hover:underline hover:text-blue-600">
+                            <a href="https://t.me/{{ $botUsername }}?start=learn_{{ $lesson->id }}" target="_blank"
+                                class="hover:underline hover:text-blue-600">
                                 {{ $lesson->title }}
                             </a>
                         </h3>
@@ -91,7 +92,7 @@
                             </div>
                         </div>
 
-                        <a href="{{ route('lessons.telegram', $lesson->id) }}"
+                        <a href="https://t.me/{{ $botUsername }}?start=learn_{{ $lesson->id }}" target="_blank"
                             class="text-blue-600 font-semibold text-sm hover:text-blue-800 inline-flex items-center group">
                             Start Learning
                             <svg class="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none"

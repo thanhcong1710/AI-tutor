@@ -20,7 +20,8 @@ class LessonController extends Controller
         }
 
         $lessons = $query->paginate(10);
-        return view('lessons.index', compact('lessons'));
+        $botUsername = config('telegram.bot_username');
+        return view('lessons.index', compact('lessons', 'botUsername'));
     }
 
     public function create()
