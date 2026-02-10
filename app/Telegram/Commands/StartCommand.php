@@ -6,6 +6,7 @@ use Telegram\Bot\Commands\Command;
 use Telegram\Bot\Laravel\Facades\Telegram;
 use App\Models\User;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 
 class StartCommand extends Command
 {
@@ -27,11 +28,11 @@ class StartCommand extends Command
         $message = $this->getUpdate()->getMessage();
         $text = $message->getText();
         $telegramId = $message->getFrom()->getId();
-        $firstName = $message->getFrom()->getFirstName();
 
         // 1. Check if Telegram ID is already linked
         $user = User::where('telegram_id', $telegramId)->first();
 
+        // --- SCENARIO A: USER ALREADY LINKED ---
         if ($user) {
             // Check for deep link parameters like /start learn_123
             $parts = preg_split('/\s+/', trim($text));
@@ -42,52 +43,7 @@ class StartCommand extends Command
                 $lesson = \App\Models\Lesson::find($lessonId);
 
                 if ($lesson) {
-                    // Close other sessions
-                    \App\Models\LearningSession::where('student_id', $user->id)
-                        ->where('status', 'in_progress')
-                        ->update(['status' => 'paused']);
-
-                    // Find or Create Session
-                    $session = \App\Models\LearningSession::where('student_id', $user->id)
-                        ->where('lesson_id', $lesson->id)
-                        ->latest()
-                        ->first();
-
-                    if (!$session) {
-                        $session = \App\Models\LearningSession::create([
-                            'student_id' => $user->id,
-                            'lesson_id' => $lesson->id,
-                            'platform' => 'telegram',
-                            'status' => 'in_progress',
-                            'current_segment_id' => $lesson->segments->sortBy('order')->first()->id ?? null,
-                            'total_segments' => $lesson->segments->count(),
-                            'started_at' => now(),
-                        ]);
-                        $msg = "🚀 **Started Lesson via Link:** {$lesson->title}\n\n";
-                    } else {
-                        $session->status = 'in_progress';
-                        $session->updated_at = now();
-                        $session->save();
-                        $msg = "🔄 **Resumed Lesson via Link:** {$lesson->title}\n\n";
-                    }
-
-                    // Get content preview
-                    $currentSegment = $session->current_segment_id
-                        ? $lesson->segments->where('id', $session->current_segment_id)->first()
-                        : null;
-
-                    if ($currentSegment) {
-                        $msg .= "📖 **Topic:** {$currentSegment->title}\n";
-                        $msg .= substr($currentSegment->content, 0, 500) . "...\n\n";
-                    } else {
-                        $msg .= "📖 **Overview:** " . substr($lesson->content ?? $lesson->description, 0, 500) . "...\n\n";
-                    }
-                    $msg .= "💡 *Ask me anything about this lesson!*";
-
-                    $this->replyWithMessage([
-                        'text' => $msg,
-                        'parse_mode' => 'Markdown',
-                    ]);
+                    $this->startLessonSession($user, $lesson);
                     return;
                 }
             }
@@ -99,10 +55,25 @@ class StartCommand extends Command
             return;
         }
 
-        // 2. Parse Email from command: /start email@example.com
-        // /start or /start email
+        // --- SCENARIO B: USER NOT LINKED ---
         $parts = preg_split('/\s+/', trim($text));
-        $email = $parts[1] ?? null;
+        $param = $parts[1] ?? null;
+
+        // B1. Handling Deep Link for Unlinked User
+        if ($param && strpos($param, 'learn_') === 0) {
+            $pendingLessonId = str_replace('learn_', '', $param);
+            // Cache the intention to learn this lesson for 1 hour
+            Cache::put("pending_lesson_{$telegramId}", $pendingLessonId, 3600);
+
+            $this->replyWithMessage([
+                'text' => "🔒 **Authentication Required**\n\nYou requested to learn Lesson #{$pendingLessonId}.\nPLEASE LINK YOUR ACCOUNT FIRST to access this content.\n\nType:\n`/start your_email@example.com`\n\nExample:\n`/start student@gmail.com`",
+                'parse_mode' => 'Markdown'
+            ]);
+            return;
+        }
+
+        // B2. Handling Login Attempt (Email)
+        $email = $param;
 
         if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $this->replyWithMessage([
@@ -124,7 +95,6 @@ class StartCommand extends Command
         }
 
         // 4. Verification / Linking
-        // Check if this user is already linked to another Telegram ID?
         if ($user->telegram_id && $user->telegram_id != $telegramId) {
             $this->replyWithMessage([
                 'text' => "❌ This email is already linked to another Telegram account.\nPlease contact support if this is an error."
@@ -134,17 +104,81 @@ class StartCommand extends Command
 
         // Update User
         $user->telegram_id = $telegramId;
-        // Keep original platform or update? Maybe just add telegram_id is enough.
-        // But we might want to know they are active on telegram.
-        // $user->platform = 'telegram'; // Don't overwrite if they are web user primarily
         $user->save();
 
         $this->replyWithMessage([
-            'text' => "✅ **Account Linked Successfully!**\n\nHello **{$user->name}** ({$user->role})!\nYou can now use the AI Tutor Bot.\n\nType /lessons to view lessons.",
+            'text' => "✅ **Account Linked Successfully!**\n\nHello **{$user->name}** ({$user->role})!\nYou can now use the AI Tutor Bot.\n",
             'parse_mode' => 'Markdown',
         ]);
 
-        // Optional: Send typing action
         $this->replyWithChatAction(['action' => 'typing']);
+
+        // --- SCENARIO C: POST-LOGIN ACTION Check ---
+        $pendingLessonId = Cache::pull("pending_lesson_{$telegramId}");
+        if ($pendingLessonId) {
+            $lesson = \App\Models\Lesson::find($pendingLessonId);
+            if ($lesson) {
+                // Auto-start the pending lesson
+                $this->startLessonSession($user, $lesson);
+                return;
+            }
+        }
+
+        $this->replyWithMessage([
+            'text' => "Type /lessons to view available lessons.",
+        ]);
+    }
+
+    /**
+     * Helper to start/resume session and reply to user
+     */
+    protected function startLessonSession($user, $lesson)
+    {
+        // Close other sessions
+        \App\Models\LearningSession::where('student_id', $user->id)
+            ->where('status', 'in_progress')
+            ->update(['status' => 'paused']);
+
+        // Find or Create Session
+        $session = \App\Models\LearningSession::where('student_id', $user->id)
+            ->where('lesson_id', $lesson->id)
+            ->latest()
+            ->first();
+
+        if (!$session) {
+            $session = \App\Models\LearningSession::create([
+                'student_id' => $user->id,
+                'lesson_id' => $lesson->id,
+                'platform' => 'telegram',
+                'status' => 'in_progress',
+                'current_segment_id' => $lesson->segments->sortBy('order')->first()->id ?? null,
+                'total_segments' => $lesson->segments->count(),
+                'started_at' => now(),
+            ]);
+            $msg = "🚀 **Started Lesson via Link:** {$lesson->title}\n\n";
+        } else {
+            $session->status = 'in_progress';
+            $session->updated_at = now();
+            $session->save();
+            $msg = "🔄 **Resumed Lesson via Link:** {$lesson->title}\n\n";
+        }
+
+        // Get content preview
+        $currentSegment = $session->current_segment_id
+            ? $lesson->segments->where('id', $session->current_segment_id)->first()
+            : null;
+
+        if ($currentSegment) {
+            $msg .= "📖 **Topic:** {$currentSegment->title}\n";
+            $msg .= substr($currentSegment->content, 0, 500) . "...\n\n";
+        } else {
+            $msg .= "📖 **Overview:** " . substr($lesson->content ?? $lesson->description, 0, 500) . "...\n\n";
+        }
+        $msg .= "💡 *Ask me anything about this lesson!*";
+
+        $this->replyWithMessage([
+            'text' => $msg,
+            'parse_mode' => 'Markdown',
+        ]);
     }
 }
