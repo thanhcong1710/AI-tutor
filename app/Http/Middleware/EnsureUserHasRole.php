@@ -6,7 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class CheckRole
+class EnsureUserHasRole
 {
     /**
      * Handle an incoming request.
@@ -15,17 +15,7 @@ class CheckRole
      */
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (!$request->user()) {
-            if ($request->expectsJson()) {
-                return response()->json(['message' => 'Unauthenticated'], 401);
-            }
-            return redirect()->route('login');
-        }
-
-        if (!in_array($request->user()->role, $roles)) {
-            if ($request->expectsJson()) {
-                return response()->json(['message' => 'Unauthorized'], 403);
-            }
+        if (!$request->user() || !in_array($request->user()->role, $roles)) {
             abort(403, 'Unauthorized action.');
         }
 
