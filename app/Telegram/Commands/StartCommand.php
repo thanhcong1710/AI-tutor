@@ -36,7 +36,7 @@ class StartCommand extends Command
         if ($user) {
             // Check for deep link parameters like /start learn_123
             $parts = preg_split('/\s+/', trim($text));
-            $param = $parts[1] ?? null;
+            $param = isset($parts[1]) ? trim($parts[1]) : null;
 
             if ($param && strpos($param, 'learn_') === 0) {
                 $lessonId = str_replace('learn_', '', $param);
@@ -49,7 +49,7 @@ class StartCommand extends Command
             }
 
             $this->replyWithMessage([
-                'text' => "👋 Welcome back, **{$user->name}**!\nRole: `{$user->role}`\n\nType /lessons to see available lessons.",
+                'text' => "👋 Welcome back, **{$user->name}**!\nRole: `{$user->role}`\n\nType /lessons to see available lessons.\n\n" . $this->getCommandList(),
                 'parse_mode' => 'Markdown',
             ]);
             return;
@@ -57,7 +57,7 @@ class StartCommand extends Command
 
         // --- SCENARIO B: USER NOT LINKED ---
         $parts = preg_split('/\s+/', trim($text));
-        $param = $parts[1] ?? null;
+        $param = isset($parts[1]) ? trim($parts[1]) : null;
 
         // B1. Handling Deep Link for Unlinked User
         if ($param && strpos($param, 'learn_') === 0) {
