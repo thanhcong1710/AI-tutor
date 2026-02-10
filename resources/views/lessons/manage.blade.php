@@ -125,16 +125,15 @@
                 <div x-show="addingQuestionTo === {{ $segment->id }}" class="mt-4 p-4 bg-gray-50 rounded-md border border-gray-200" x-data="{ qType: 'multiple_choice' }">
                     <form action="{{ route('questions.store', $segment->id) }}" method="POST">
                         @csrf
-                        <div class="space-y-4">
                             <div>
-                                <label class="block text-xs font-medium text-gray-700">Question Text</label>
-                                <input type="text" name="question" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text</label>
+                                <input type="text" name="question" required class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all duration-200">
                             </div>
                             
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-700">Type</label>
-                                    <select name="type" x-model="qType" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-1">Type</label>
+                                    <select name="type" x-model="qType" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all duration-200">
                                         <option value="multiple_choice">Multiple Choice</option>
                                         <option value="true_false">True/False</option>
                                         <option value="short_answer">Short Answer</option>
@@ -142,8 +141,8 @@
                                 </div>
                                 
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-700">Status</label>
-                                    <select name="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+                                    <select name="status" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all duration-200">
                                         <option value="active">Active</option>
                                         <option value="inactive">Inactive</option>
                                     </select>
@@ -151,26 +150,37 @@
                             </div>
 
                             <!-- Multiple Choice Options -->
-                            <div x-show="qType === 'multiple_choice'" class="space-y-2">
-                                <label class="block text-xs font-medium text-gray-700">Options</label>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    <input type="text" name="option_a" placeholder="Option A" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                    <input type="text" name="option_b" placeholder="Option B" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                    <input type="text" name="option_c" placeholder="Option C" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                    <input type="text" name="option_d" placeholder="Option D" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <div x-show="qType === 'multiple_choice'" class="space-y-3 p-4 bg-indigo-50 rounded-lg border border-indigo-100">
+                                <label class="block text-sm font-semibold text-indigo-900">Answer Options</label>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="font-bold text-indigo-400">A.</span>
+                                        <input type="text" name="option_a" placeholder="Option A Content" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all">
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="font-bold text-indigo-400">B.</span>
+                                        <input type="text" name="option_b" placeholder="Option B Content" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all">
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="font-bold text-indigo-400">C.</span>
+                                        <input type="text" name="option_c" placeholder="Option C Content" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all">
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="font-bold text-indigo-400">D.</span>
+                                        <input type="text" name="option_d" placeholder="Option D Content" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all">
+                                    </div>
                                 </div>
                             </div>
                             
                             <div>
-                                <label class="block text-xs font-medium text-gray-700">Correct Answer</label>
-                                <input type="text" name="correct_answer" required placeholder="e.g. A, True, or the answer text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Correct Answer</label>
+                                <input type="text" name="correct_answer" required placeholder="e.g. A, True, or the answer text" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all duration-200">
                             </div>
                             
                             <div>
-                                <label class="block text-xs font-medium text-gray-700">Explanation (Optional)</label>
-                                <textarea name="explanation" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Explanation (Optional)</label>
+                                <textarea name="explanation" rows="2" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all duration-200"></textarea>
                             </div>
-                        </div>
                         
                         <div class="mt-4 flex justify-end space-x-3">
                             <button type="button" @click="addingQuestionTo = null" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Cancel</button>
@@ -188,23 +198,51 @@
         </div>
 
         <!-- Add Segment Section -->
-        <div class="bg-gray-100 p-6 rounded-lg border border-gray-200">
-            <h3 class="text-lg font-bold text-gray-800 mb-4">Add New Segment</h3>
-            <form action="{{ route('segments.store', $lesson->id) }}" method="POST">
+        <!-- Add Segment Section -->
+        <div class="bg-white p-8 rounded-xl shadow-xl border border-gray-100 mt-10 relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
+            <!-- Decorative Background Element -->
+            <div class="absolute top-0 right-0 p-8 opacity-5 transform translate-x-1/3 -translate-y-1/3 pointer-events-none">
+                 <svg class="w-64 h-64 text-indigo-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-2.033 16.01c.564-1.789 1.632-3.932 1.821-4.474.273-.787-.211-1.136-1.74.209l-.34-.64c1.744-1.897 5.335-2.326 4.113.613-.763 1.835-1.309 3.074-1.621 4.03-.455 1.393.694.828 1.819-.211.154.25.214.366.195.421-1.751 2.921-6.721 2.228-4.248-3.007zm3.565-5.26c-.309-.311-.07-.743.439-1.258.522-.53.535-1.203.02-1.719-.508-.507-1.171-.502-1.706.035-.53.532-.97.289-.661.6.309.31.069.742-.439 1.257-.521.53-.535 1.203-.02 1.719.507.508 1.171.503 1.706-.035.53-.532.971-.289.661-.6z"/></svg>
+            </div>
+
+            <div class="relative z-10 flex items-center mb-8">
+                <div class="bg-indigo-600 rounded-lg p-3 mr-4 shadow-md group-hover:scale-110 transition-transform duration-300">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900">Add New Segment</h3>
+                    <p class="text-gray-500 text-sm mt-1">Structure your lesson by creating a new learning section.</p>
+                </div>
+            </div>
+            
+            <form action="{{ route('segments.store', $lesson->id) }}" method="POST" class="relative z-10">
                 @csrf
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="md:col-span-1">
-                        <input type="text" name="title" required placeholder="Segment Title (e.g., Intro)"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    <div class="md:col-span-4 space-y-2">
+                        <label class="block text-sm font-bold text-gray-700">Segment Title <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <input type="text" name="title" required placeholder="e.g., Introduction to Syntax" 
+                                class="w-full rounded-lg border-gray-300 bg-gray-50 px-4 py-3 pl-10 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 focus:outline-none transition-all duration-200 shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            </div>
+                        </div>
                     </div>
-                    <div class="md:col-span-2">
-                        <input type="text" name="content" placeholder="Content (Optional)"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <div class="md:col-span-8 space-y-2">
+                        <label class="block text-sm font-bold text-gray-700">Description <span class="text-gray-400 font-normal">(Optional)</span></label>
+                        <div class="relative">
+                            <input type="text" name="content" placeholder="Briefly describe what students will learn in this part..." 
+                                class="w-full rounded-lg border-gray-300 bg-gray-50 px-4 py-3 pl-10 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 focus:outline-none transition-all duration-200 shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="mt-4 text-right">
-                    <button type="submit"
-                        class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <div class="mt-8 flex justify-end">
+                    <button type="submit" 
+                        class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-8 py-3 text-sm font-bold text-white shadow-lg hover:bg-indigo-700 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 transform hover:-translate-y-0.5">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         Create Segment
                     </button>
                 </div>
