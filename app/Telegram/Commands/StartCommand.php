@@ -138,6 +138,7 @@ class StartCommand extends Command
         return "🛠 **Available Commands:**\n" .
             "/next - Go to next topic\n" .
             "/quiz - Take a quiz\n" .
+            "/reset - Restart current lesson\n" .
             "/lessons - View all lessons\n" .
             "/lang vi - Switch to Vietnamese\n" .
             "/lang en - Switch to English";
@@ -153,13 +154,14 @@ class StartCommand extends Command
             ->where('status', 'in_progress')
             ->update(['status' => 'paused']);
 
-        // Find or Create Session
+        // Find existing Session
         $session = \App\Models\LearningSession::where('student_id', $user->id)
             ->where('lesson_id', $lesson->id)
             ->latest()
             ->first();
 
         if (!$session) {
+            // New Session
             $session = \App\Models\LearningSession::create([
                 'student_id' => $user->id,
                 'lesson_id' => $lesson->id,
@@ -171,10 +173,21 @@ class StartCommand extends Command
             ]);
             $msg = "🚀 **Started Lesson via Link:** {$lesson->title}\n\n";
         } else {
-            $session->status = 'in_progress';
-            $session->updated_at = now();
-            $session->save();
-            $msg = "🔄 **Resumed Lesson via Link:** {$lesson->title}\n\n";
+            // Check if completed -> Restart
+            if ($session->status === 'completed') {
+                $session->status = 'in_progress';
+                $session->current_segment_id = $lesson->segments->sortBy('order')->first()->id ?? null;
+                $session->completed_segments = 0;
+                $session->updated_at = now();
+                $session->save();
+                $msg = "🔄 **Lesson Restarted:** {$lesson->title} (Previous completion reset)\n\n";
+            } else {
+                // Resume
+                $session->status = 'in_progress';
+                $session->updated_at = now();
+                $session->save();
+                $msg = "▶️ **Resumed Lesson:** {$lesson->title}\n\n";
+            }
         }
 
         // Get content preview
