@@ -21,6 +21,15 @@ class LessonController extends Controller
 
         $lessons = $query->paginate(10);
         $botUsername = config('telegram.bot_username');
+
+        if (empty($botUsername)) {
+            \Illuminate\Support\Facades\Log::warning('TELEGRAM_BOT_USERNAME is not set in .env or config/telegram.php');
+            $botUsername = 'YOUR_BOT_USERNAME_MISSING';
+        }
+
+        // Ensure no '@' prefix in username for t.me link
+        $botUsername = ltrim($botUsername, '@');
+
         return view('lessons.index', compact('lessons', 'botUsername'));
     }
 
