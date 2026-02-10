@@ -28,6 +28,12 @@ class LessonController extends Controller
         return view('lessons.create');
     }
 
+    public function manage(Lesson $lesson)
+    {
+        $lesson->load(['segments.questions']);
+        return view('lessons.manage', compact('lesson'));
+    }
+
     public function edit(Lesson $lesson)
     {
         return view('lessons.edit', compact('lesson'));

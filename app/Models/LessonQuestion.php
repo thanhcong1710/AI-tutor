@@ -21,6 +21,7 @@ class LessonQuestion extends Model
         'explanation',
         'points',
         'difficulty',
+        'status',
     ];
 
     protected $casts = [

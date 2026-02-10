@@ -33,5 +33,16 @@ Route::middleware('auth')->group(function () {
         Route::post('/lessons', [LessonController::class, 'store'])->name('lessons.store');
         Route::get('/lessons/{lesson}/edit', [LessonController::class, 'edit'])->name('lessons.edit');
         Route::put('/lessons/{lesson}', [LessonController::class, 'update'])->name('lessons.update');
+
+        // Content Management (Segments & Questions)
+        Route::get('/lessons/{lesson}/manage', [LessonController::class, 'manage'])->name('lessons.manage');
+
+        Route::post('/lessons/{lesson}/segments', [App\Http\Controllers\Web\SegmentController::class, 'store'])->name('segments.store');
+        Route::put('/segments/{segment}', [App\Http\Controllers\Web\SegmentController::class, 'update'])->name('segments.update');
+        Route::delete('/segments/{segment}', [App\Http\Controllers\Web\SegmentController::class, 'destroy'])->name('segments.destroy');
+
+        Route::post('/segments/{segment}/questions', [App\Http\Controllers\Web\QuestionController::class, 'store'])->name('questions.store');
+        Route::put('/questions/{question}', [App\Http\Controllers\Web\QuestionController::class, 'update'])->name('questions.update');
+        Route::delete('/questions/{question}', [App\Http\Controllers\Web\QuestionController::class, 'destroy'])->name('questions.destroy');
     });
 });
