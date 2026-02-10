@@ -137,6 +137,7 @@ class StartCommand extends Command
     {
         return "🛠 **Available Commands:**\n" .
             "/next - Go to next topic\n" .
+            "/quiz - Take a quiz\n" .
             "/lessons - View all lessons\n" .
             "/lang vi - Switch to Vietnamese\n" .
             "/lang en - Switch to English";

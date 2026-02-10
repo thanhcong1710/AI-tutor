@@ -144,6 +144,20 @@ class TelegramController extends Controller
                     $contextData .= "2. Explain concepts based on the provided content.\n";
                     $contextData .= "3. Be interactive. Ask the student if they understand before moving on.\n";
                     $contextData .= "4. Stick to the lesson plan.\n";
+
+                    // Add Questions Context
+                    $questions = $currentSegment->questions;
+                    if ($questions->count() > 0) {
+                        $contextData .= "\n--- QUIZ QUESTIONS & ANSWERS (For AI Grading Only) ---\n";
+                        foreach ($questions as $q) {
+                            $contextData .= "Q: {$q->question_text}\nType: {$q->question_type}\n";
+                            if ($q->options) {
+                                $contextData .= "Options: " . json_encode($q->options) . "\n";
+                            }
+                            $contextData .= "Correct Answer: {$q->correct_answer}\nExplanation: {$q->explanation}\n\n";
+                        }
+                        $contextData .= "INSTRUCTION: If the user asks for a quiz or exercises, present these questions one by one or all together (as requested). If the user provides answers, GRADE them based on the correct answers above and provide explanations.\n";
+                    }
                 } else {
                     $contextData .= "Overview:\n" . substr($lesson->content ?? $lesson->description, 0, 1500) . "...";
                     $contextData .= "\nINSTRUCTION: Provide an overview and guide the user to start the first segment.\n";

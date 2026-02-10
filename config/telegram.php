@@ -66,6 +66,7 @@ return [
         App\Telegram\Commands\ListLessonsCommand::class, // Added List Lessons
         App\Telegram\Commands\LearnCommand::class, // Added Learn Command
         App\Telegram\Commands\NextCommand::class, // Added Next Command
+        App\Telegram\Commands\QuizCommand::class, // Added Quiz Command
     ],
 
     /*
