@@ -32,6 +32,9 @@ class User extends Authenticatable
         'subscription_expires_at',
         'free_minutes_used_today',
         'free_minutes_reset_date',
+        'total_tokens_used',
+        'tokens_used_this_month',
+        'tokens_reset_date',
         'preferences',
     ];
 
@@ -59,6 +62,7 @@ class User extends Authenticatable
             'date_of_birth' => 'date',
             'subscription_expires_at' => 'datetime',
             'free_minutes_reset_date' => 'date',
+            'tokens_reset_date' => 'date',
         ];
     }
 }

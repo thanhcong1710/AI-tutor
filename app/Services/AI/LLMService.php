@@ -14,8 +14,8 @@ class LLMService
 
     public function explainConcept(string $concept, string $context = 'General', string $language = 'vi'): array
     {
-        $explanation = $this->generateExplanation($concept, $context, 'Beginner', $language);
-        return ['content' => $explanation];
+        $result = $this->generateExplanationWithTokens($concept, $context, 'Beginner', $language);
+        return $result;
     }
 
     public function chatWithContext(string $message, string $contextData, string $language = 'vi'): array
@@ -28,11 +28,16 @@ class LLMService
             . "Please answer the question based on the context provided. If the question is unrelated, answer generally but mention the current lesson context if relevant.\n"
             . "{$langInstruction}";
 
-        $response = $this->chat($prompt);
-        return ['content' => $response];
+        return $this->chat($prompt);
     }
 
     public function generateExplanation(string $content, string $subject, string $level, string $language = 'vi'): string
+    {
+        $result = $this->generateExplanationWithTokens($content, $subject, $level, $language);
+        return $result['content'];
+    }
+
+    public function generateExplanationWithTokens(string $content, string $subject, string $level, string $language = 'vi'): array
     {
         $langInstruction = $language === 'vi' ? 'Answer in Vietnamese.' : 'Answer in English.';
 
@@ -77,8 +82,8 @@ Return the response as a JSON array of questions with this structure ONLY (no ma
   }
 ]";
 
-        $response = $this->chat($prompt);
-        $response = $this->cleanJson($response);
+        $result = $this->chat($prompt);
+        $response = $this->cleanJson($result['content']);
 
         try {
             return json_decode($response, true) ?? [];
@@ -110,8 +115,8 @@ Return as JSON ONLY (no markdown code blocks):
   \"suggestions\": \"...\"
 }";
 
-        $response = $this->chat($prompt);
-        $response = $this->cleanJson($response);
+        $result = $this->chat($prompt);
+        $response = $this->cleanJson($result['content']);
 
         try {
             return json_decode($response, true) ?? [
@@ -151,8 +156,8 @@ Return as JSON ONLY (no markdown code blocks):
   \"learning_pace\": \"...\"
 }";
 
-        $response = $this->chat($prompt);
-        $response = $this->cleanJson($response);
+        $result = $this->chat($prompt);
+        $response = $this->cleanJson($result['content']);
 
         try {
             return json_decode($response, true) ?? [];
@@ -169,14 +174,15 @@ Return as JSON ONLY (no markdown code blocks):
 
     /**
      * Hybrid Chat: Gemini Primary -> OpenAI Backup
+     * Returns array with 'content' and token usage
      */
-    protected function chat(string $prompt, array $options = []): string
+    protected function chat(string $prompt, array $options = []): array
     {
         // 1. Try Gemini (Primary)
         if (config('services.gemini.api_key')) {
             try {
                 $response = $this->chatWithGemini($prompt, $options);
-                if (!empty($response)) {
+                if (!empty($response['content'])) {
                     return $response;
                 }
             } catch (\Exception $e) {
@@ -190,10 +196,15 @@ Return as JSON ONLY (no markdown code blocks):
             return $this->chatWithOpenAI($prompt, $options);
         }
 
-        return "I'm having trouble thinking right now. Please check my AI configuration.";
+        return [
+            'content' => "I'm having trouble thinking right now. Please check my AI configuration.",
+            'tokens_input' => 0,
+            'tokens_output' => 0,
+            'tokens_total' => 0
+        ];
     }
 
-    protected function chatWithGemini(string $prompt, array $options = []): string
+    protected function chatWithGemini(string $prompt, array $options = []): array
     {
         $apiKey = config('services.gemini.api_key');
         $model = config('services.gemini.model', 'gemini-2.5-flash');
@@ -211,10 +222,21 @@ Return as JSON ONLY (no markdown code blocks):
             throw new \Exception("Gemini Error " . $response->status() . ": " . $response->body());
         }
 
-        return $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '';
+        $data = $response->json();
+        $content = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
+
+        // Extract token usage from Gemini API response
+        $usage = $data['usageMetadata'] ?? [];
+
+        return [
+            'content' => $content,
+            'tokens_input' => $usage['promptTokenCount'] ?? 0,
+            'tokens_output' => $usage['candidatesTokenCount'] ?? 0,
+            'tokens_total' => $usage['totalTokenCount'] ?? 0,
+        ];
     }
 
-    protected function chatWithOpenAI(string $prompt, array $options = []): string
+    protected function chatWithOpenAI(string $prompt, array $options = []): array
     {
         $apiKey = config('services.openai.api_key');
         $model = config('services.openai.model', 'gpt-4o');
@@ -230,9 +252,23 @@ Return as JSON ONLY (no markdown code blocks):
 
         if ($response->failed()) {
             Log::error('OpenAI Backup Failed', ['status' => $response->status(), 'body' => $response->body()]);
-            return "Error from OpenAI Backup.";
+            return [
+                'content' => "Error from OpenAI Backup.",
+                'tokens_input' => 0,
+                'tokens_output' => 0,
+                'tokens_total' => 0
+            ];
         }
 
-        return $response->json()['choices'][0]['message']['content'] ?? '';
+        $data = $response->json();
+        $content = $data['choices'][0]['message']['content'] ?? '';
+        $usage = $data['usage'] ?? [];
+
+        return [
+            'content' => $content,
+            'tokens_input' => $usage['prompt_tokens'] ?? 0,
+            'tokens_output' => $usage['completion_tokens'] ?? 0,
+            'tokens_total' => $usage['total_tokens'] ?? 0,
+        ];
     }
 }

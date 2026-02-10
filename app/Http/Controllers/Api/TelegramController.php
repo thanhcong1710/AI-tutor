@@ -136,9 +136,15 @@ class TelegramController extends Controller
 
             $replyText = $aiResponse['content'] ?? "I'm thinking...";
             $duration = microtime(true) - $startTime;
-            Log::info("AI Generated Response (Length: " . strlen($replyText) . ") in " . round($duration, 2) . "s");
 
-            // 4. Log AI Response
+            // Extract token usage
+            $tokensInput = $aiResponse['tokens_input'] ?? 0;
+            $tokensOutput = $aiResponse['tokens_output'] ?? 0;
+            $tokensTotal = $aiResponse['tokens_total'] ?? 0;
+
+            Log::info("AI Generated Response (Length: " . strlen($replyText) . ") in " . round($duration, 2) . "s | Tokens: {$tokensTotal}");
+
+            // 4. Log AI Response with Token Metadata
             try {
                 AiChatLog::create([
                     'user_id' => $user ? $user->id : null,
@@ -152,11 +158,34 @@ class TelegramController extends Controller
                         'lesson_id' => ($activeSession && $activeSession->lesson) ? $activeSession->lesson->id : null,
                         'language' => $language,
                         'model' => config('services.gemini.model', 'unknown'),
+                        'tokens_input' => $tokensInput,
+                        'tokens_output' => $tokensOutput,
+                        'tokens_total' => $tokensTotal,
                     ]
                 ]);
-                Log::info("AI Response Logged to Database with Metadata.");
+                Log::info("AI Response Logged to Database with Token Metadata.");
             } catch (\Exception $e) {
                 Log::error('Failed to log AI message: ' . $e->getMessage());
+            }
+
+            // 5. Update User Token Usage
+            if ($user && $tokensTotal > 0) {
+                try {
+                    $user->increment('total_tokens_used', $tokensTotal);
+                    $user->increment('tokens_used_this_month', $tokensTotal);
+
+                    // Reset monthly counter if needed
+                    $now = now();
+                    if (!$user->tokens_reset_date || $user->tokens_reset_date->month != $now->month) {
+                        $user->tokens_used_this_month = $tokensTotal;
+                        $user->tokens_reset_date = $now->startOfMonth();
+                        $user->save();
+                    }
+
+                    Log::info("User Token Usage Updated: Total={$user->total_tokens_used}, Month={$user->tokens_used_this_month}");
+                } catch (\Exception $e) {
+                    Log::error('Failed to update user token usage: ' . $e->getMessage());
+                }
             }
 
             Telegram::sendMessage([
