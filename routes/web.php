@@ -4,6 +4,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\LessonController;
+use App\Http\Controllers\Web\AiLogController;
+use App\Http\Controllers\Web\SegmentController;
+use App\Http\Controllers\Web\QuestionController;
 
 // Authentication
 Route::middleware('guest')->group(function () {
@@ -37,12 +40,15 @@ Route::middleware('auth')->group(function () {
         // Content Management (Segments & Questions)
         Route::get('/lessons/{lesson}/manage', [LessonController::class, 'manage'])->name('lessons.manage');
 
-        Route::post('/lessons/{lesson}/segments', [App\Http\Controllers\Web\SegmentController::class, 'store'])->name('segments.store');
-        Route::put('/segments/{segment}', [App\Http\Controllers\Web\SegmentController::class, 'update'])->name('segments.update');
-        Route::delete('/segments/{segment}', [App\Http\Controllers\Web\SegmentController::class, 'destroy'])->name('segments.destroy');
+        Route::post('/lessons/{lesson}/segments', [SegmentController::class, 'store'])->name('segments.store');
+        Route::put('/segments/{segment}', [SegmentController::class, 'update'])->name('segments.update');
+        Route::delete('/segments/{segment}', [SegmentController::class, 'destroy'])->name('segments.destroy');
 
-        Route::post('/segments/{segment}/questions', [App\Http\Controllers\Web\QuestionController::class, 'store'])->name('questions.store');
-        Route::put('/questions/{question}', [App\Http\Controllers\Web\QuestionController::class, 'update'])->name('questions.update');
-        Route::delete('/questions/{question}', [App\Http\Controllers\Web\QuestionController::class, 'destroy'])->name('questions.destroy');
+        Route::post('/segments/{segment}/questions', [QuestionController::class, 'store'])->name('questions.store');
+        Route::put('/questions/{question}', [QuestionController::class, 'update'])->name('questions.update');
+        Route::delete('/questions/{question}', [QuestionController::class, 'destroy'])->name('questions.destroy');
+
+        // AI Logs & Analytics
+        Route::get('/ai-logs', [AiLogController::class, 'index'])->name('ai_logs.index');
     });
 });

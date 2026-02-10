@@ -16,6 +16,9 @@ class AiChatLog extends Model
         'role',
         'message',
         'metadata',
+        'prompt_tokens',
+        'completion_tokens',
+        'total_tokens',
     ];
 
     protected $casts = [

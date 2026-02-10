@@ -152,15 +152,15 @@ class TelegramController extends Controller
                     'platform_chat_id' => (string) $chatId,
                     'role' => 'assistant',
                     'message' => $replyText,
+                    'prompt_tokens' => $tokensInput,
+                    'completion_tokens' => $tokensOutput,
+                    'total_tokens' => $tokensTotal,
                     'metadata' => [
                         'processing_time' => round($duration, 2),
                         'context_type' => ($activeSession && $activeSession->lesson) ? 'lesson' : 'general',
                         'lesson_id' => ($activeSession && $activeSession->lesson) ? $activeSession->lesson->id : null,
                         'language' => $language,
                         'model' => config('services.gemini.model', 'unknown'),
-                        'tokens_input' => $tokensInput,
-                        'tokens_output' => $tokensOutput,
-                        'tokens_total' => $tokensTotal,
                     ]
                 ]);
                 Log::info("AI Response Logged to Database with Token Metadata.");
