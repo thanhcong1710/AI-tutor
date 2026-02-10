@@ -38,6 +38,7 @@ class TelegramController extends Controller
             // Note: commandsHandler might have already responded if it was a command.
             // But we check here to process AI chat.
             $message = $update->getMessage();
+            Log::info('Payload text:', ['type'=>$message->getType(),'message'=>$message]);
 
             if ($message && $message->getType() === 'text') {
                 $text = $message->getText();
