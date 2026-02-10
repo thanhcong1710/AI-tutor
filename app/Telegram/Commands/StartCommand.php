@@ -125,8 +125,21 @@ class StartCommand extends Command
         }
 
         $this->replyWithMessage([
-            'text' => "Type /lessons to view available lessons.",
+            'text' => "Type /lessons to view available lessons.\n\n" . $this->getCommandList(),
+            'parse_mode' => 'Markdown',
         ]);
+    }
+
+    /**
+     * Helper to get command list string
+     */
+    protected function getCommandList(): string
+    {
+        return "🛠 **Available Commands:**\n" .
+            "/next - Go to next topic\n" .
+            "/lessons - View all lessons\n" .
+            "/lang vi - Switch to Vietnamese\n" .
+            "/lang en - Switch to English";
     }
 
     /**
@@ -174,7 +187,8 @@ class StartCommand extends Command
         } else {
             $msg .= "📖 **Overview:** " . substr($lesson->content ?? $lesson->description, 0, 500) . "...\n\n";
         }
-        $msg .= "💡 *Ask me anything about this lesson!*";
+        $msg .= "💡 *Ask me anything about this lesson!*\n\n";
+        $msg .= $this->getCommandList();
 
         $this->replyWithMessage([
             'text' => $msg,

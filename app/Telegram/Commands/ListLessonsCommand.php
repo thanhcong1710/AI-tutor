@@ -14,7 +14,7 @@ class ListLessonsCommand extends Command
     public function handle()
     {
         // Get latest 10 lessons
-        $lessons = Lesson::where('status', 'ready')
+        $lessons = Lesson::where('status', 'published')
             ->orderBy('id', 'desc')
             ->limit(10)
             ->get();
