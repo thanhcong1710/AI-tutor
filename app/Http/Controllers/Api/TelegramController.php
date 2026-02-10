@@ -41,6 +41,7 @@ class TelegramController extends Controller
 
             if ($message && $message->getType() === 'text') {
                 $text = $message->getText();
+                Log::info('Payload text:', $text);
                 // Explicitly skip commands (starts with /)
                 if (strpos($text, '/') === 0) {
                     return response()->json(['status' => 'ok']);
@@ -67,6 +68,7 @@ class TelegramController extends Controller
         $chatId = $message->getChat()->getId();
         $telegramUserId = $message->getFrom()->getId();
 
+        Log::info('Payload handleTextMessage:', $text);
         // Check if it's a command (starts with /)
         if (strpos($text, '/') === 0) {
             return;
