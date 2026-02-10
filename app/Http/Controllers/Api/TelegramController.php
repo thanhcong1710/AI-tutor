@@ -150,7 +150,7 @@ class TelegramController extends Controller
                     if ($questions->count() > 0) {
                         $contextData .= "\n--- QUIZ QUESTIONS & ANSWERS (For AI Grading Only) ---\n";
                         foreach ($questions as $q) {
-                            $contextData .= "Q: {$q->question_text}\nType: {$q->question_type}\n";
+                            $contextData .= "Q: {$q->question}\nType: {$q->type}\n";
                             if ($q->options) {
                                 $contextData .= "Options: " . json_encode($q->options) . "\n";
                             }

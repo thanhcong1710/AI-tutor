@@ -49,9 +49,9 @@ class QuizCommand extends Command
 
         foreach ($segment->questions as $index => $q) {
             $num = $index + 1;
-            $text .= "**Q{$num}:** {$q->question_text}\n";
+            $text .= "**Q{$num}:** {$q->question}\n";
 
-            if ($q->question_type === 'multiple_choice' && !empty($q->options)) {
+            if ($q->type === 'multiple_choice' && !empty($q->options)) {
                 $options = is_string($q->options) ? json_decode($q->options, true) : $q->options;
                 if (is_array($options)) {
                     foreach ($options as $opt) {
