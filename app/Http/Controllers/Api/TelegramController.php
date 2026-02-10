@@ -114,17 +114,39 @@ class TelegramController extends Controller
                 Log::info("Active Session Found: Lesson ID " . $activeSession->lesson->id);
                 // Prepare Context from Lesson
                 $lesson = $activeSession->lesson;
+
+                // Build Lesson Outline Context
                 $contextData = "Current Lesson: {$lesson->title} ({$lesson->subject} - {$lesson->level})\n";
+                $contextData .= "Lesson Outline (Segments):\n";
 
-                $segment = $activeSession->current_segment_id
-                    ? $lesson->segments->where('id', $activeSession->current_segment_id)->first()
-                    : null;
+                $segments = $lesson->segments; // Already ordered by model
+                $currentSegment = null;
 
-                if ($segment) {
-                    $contextData .= "Topic: {$segment->title}\n";
-                    $contextData .= "Content:\n" . substr($segment->content, 0, 1500) . "...";
+                foreach ($segments as $seg) {
+                    $marker = ($seg->id == $activeSession->current_segment_id) ? "👉 [CURRENT STEP] " : "- ";
+                    $contextData .= "{$marker}{$seg->title}\n";
+                    if ($seg->id == $activeSession->current_segment_id) {
+                        $currentSegment = $seg;
+                    }
+                }
+                $contextData .= "\n";
+
+                if ($currentSegment) {
+                    // Detailed Content of CURRENT Segment
+                    $contextData .= "--- CURRENT SEGMENT CONTENT ---\n";
+                    $contextData .= "Title: {$currentSegment->title}\n";
+                    $contextData .= "Content:\n" . substr($currentSegment->content, 0, 2500) . "...\n";
+                    $contextData .= "--- END CURRENT SEGMENT CONTENT ---\n\n";
+
+                    // AI Instruction
+                    $contextData .= "INSTRUCTION for AI Tutor:\n";
+                    $contextData .= "1. You are strictly teaching the Current Segment: '{$currentSegment->title}'. Do not explain future segments yet.\n";
+                    $contextData .= "2. Explain concepts based on the provided content.\n";
+                    $contextData .= "3. Be interactive. Ask the student if they understand before moving on.\n";
+                    $contextData .= "4. Stick to the lesson plan.\n";
                 } else {
                     $contextData .= "Overview:\n" . substr($lesson->content ?? $lesson->description, 0, 1500) . "...";
+                    $contextData .= "\nINSTRUCTION: Provide an overview and guide the user to start the first segment.\n";
                 }
 
                 $aiResponse = $this->llmService->chatWithContext($text, $contextData, $language);
