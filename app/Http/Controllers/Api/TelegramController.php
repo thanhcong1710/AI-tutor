@@ -28,11 +28,25 @@ class TelegramController extends Controller
         Log::info('Payload:', $request->all());
 
         try {
-            // Returns Update object
-            $update = Telegram::commandsHandler(true);
+            // 1. Get Update Object manually to ensure we have it
+            $update = Telegram::getWebhookUpdate();
 
-            // If it's a command, it's already handled. If not, handle as text message.
-            if ($update->getMessage() && $update->getMessage()->getType() === 'text') {
+            // 2. Let SDK handle commands (if any)
+            Telegram::commandsHandler(true);
+
+            // 3. Check if it's a normal text message (not a command)
+            // Note: commandsHandler might have already responded if it was a command.
+            // But we check here to process AI chat.
+            $message = $update->getMessage();
+
+            if ($message && $message->getType() === 'text') {
+                $text = $message->getText();
+                // Explicitly skip commands (starts with /)
+                if (strpos($text, '/') === 0) {
+                    return response()->json(['status' => 'ok']);
+                }
+
+                // Process User Chat
                 $this->handleTextMessage($update);
             }
 
