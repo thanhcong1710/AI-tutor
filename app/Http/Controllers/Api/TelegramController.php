@@ -156,7 +156,11 @@ class TelegramController extends Controller
                             }
                             $contextData .= "Correct Answer: {$q->correct_answer}\nExplanation: {$q->explanation}\n\n";
                         }
-                        $contextData .= "INSTRUCTION: If the user asks for a quiz or exercises, present these questions one by one or all together (as requested). If the user provides answers, GRADE them based on the correct answers above and provide explanations.\n";
+                        $contextData .= "INSTRUCTION: \n";
+                        $contextData .= "1. If the user asks for a quiz, present questions.\n";
+                        $contextData .= "2. CRITICAL: If the user sends a short response like 'A', 'B', 'C', 'D' (or '1A', '2. B'), ASSUME they are answering the quiz questions above.\n";
+                        $contextData .= "3. Check their answer against the 'Correct Answer' provided.\n";
+                        $contextData .= "4. Reply with whether they are Correct or Incorrect, and explain why using the 'Explanation'.\n";
                     }
                 } else {
                     $contextData .= "Overview:\n" . substr($lesson->content ?? $lesson->description, 0, 1500) . "...";
