@@ -150,7 +150,7 @@ class TelegramController extends Controller
                     if ($questions->count() > 0) {
                         $contextData .= "\n--- QUIZ QUESTIONS & ANSWERS (For AI Grading Only) ---\n";
                         foreach ($questions as $q) {
-                            $contextData .= "Q: {$q->question}\nType: {$q->type}\n";
+                            $contextData .= "Question [ID:{$q->id}]: {$q->question}\nType: {$q->type}\n";
                             if ($q->options) {
                                 $contextData .= "Options: " . json_encode($q->options) . "\n";
                             }
@@ -161,6 +161,8 @@ class TelegramController extends Controller
                         $contextData .= "2. CRITICAL: If the user sends a short response like 'A', 'B', 'C', 'D' (or '1A', '2. B'), ASSUME they are answering the quiz questions above.\n";
                         $contextData .= "3. Check their answer against the 'Correct Answer' provided.\n";
                         $contextData .= "4. Reply with whether they are Correct or Incorrect, and explain why using the 'Explanation'.\n";
+                        $contextData .= "5. SUPER IMPORTANT: For every question you grade, append this HIDDEN MARKER at the very end of your response: ||GRADE:QuestionID|IsCorrect(1/0)|StudentAnswer||\n";
+                        $contextData .= "   Example: 'Correct! The answer is A.' ||GRADE:15|1|A|| 'Incorrect. The answer is B.' ||GRADE:16|0|C||\n";
                     }
                 } else {
                     $contextData .= "Overview:\n" . substr($lesson->content ?? $lesson->description, 0, 1500) . "...";
@@ -175,6 +177,39 @@ class TelegramController extends Controller
             }
 
             $replyText = $aiResponse['content'] ?? "I'm thinking...";
+
+            // --- PARSE QUIZ GRADES ---
+            // Pattern: ||GRADE:QuestionID|IsCorrect(1/0)|StudentAnswer||
+            $pattern = '/\|\|GRADE:(\d+)\|([01])\|(.*?)\|\|/s';
+            if (preg_match_all($pattern, $replyText, $matches, PREG_SET_ORDER)) {
+                Log::info("Found " . count($matches) . " quiz grades in AI response.");
+                foreach ($matches as $match) {
+                    $qId = $match[1];
+                    $isCorrect = (bool) $match[2];
+                    $studentAns = trim($match[3]);
+
+                    if ($activeSession) {
+                        try {
+                            // Deduplicate? Or allow multiple attempts? Let's create new attempt.
+                            \App\Models\StudentAnswer::create([
+                                'session_id' => $activeSession->id,
+                                'question_id' => $qId,
+                                'student_answer' => $studentAns,
+                                'is_correct' => $isCorrect,
+                                'points_earned' => $isCorrect ? 10 : 0,
+                                'attempt_number' => 1, // Simple default for now
+                            ]);
+                            Log::info("Saved Student Answer: Q:{$qId} Correct:{$isCorrect}");
+                        } catch (\Exception $e) {
+                            Log::error("Failed to save student answer: " . $e->getMessage());
+                        }
+                    }
+                }
+                // Remove markers from reply
+                $replyText = preg_replace($pattern, '', $replyText);
+            }
+            // -------------------------
+
             $duration = microtime(true) - $startTime;
 
             // Extract token usage
