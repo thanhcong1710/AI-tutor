@@ -13,12 +13,13 @@ class LessonController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $query = Lesson::latest();
 
+        // Redirect students to their dashboard
         if ($user->role === 'student') {
-            $query->where('status', 'published');
+            return redirect()->route('student.dashboard');
         }
 
+        $query = Lesson::latest();
         $lessons = $query->paginate(10);
         $botUsername = config('telegram.bot_username');
 
