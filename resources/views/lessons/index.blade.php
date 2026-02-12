@@ -84,23 +84,28 @@
                         </div>
                     </div>
 
-                    <div class="bg-gray-50 px-6 py-4 flex justify-between items-center border-t border-gray-100">
-                        <div class="flex items-center">
-                            <!-- Progress Bar (Placeholder) -->
-                            <div class="w-24 bg-gray-200 rounded-full h-1.5 mr-2">
-                                <div class="bg-green-500 h-1.5 rounded-full" style="width: 0%"></div>
-                            </div>
-                        </div>
+                    <div class="bg-gray-50 px-6 py-4 border-t border-gray-100">
+                        <div class="flex items-center justify-between gap-3">
+                            <!-- Learn on Web Button -->
+                            <a href="{{ route('lessons.learn', $lesson->id) }}"
+                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm py-2.5 px-4 rounded-lg inline-flex items-center justify-center group transition-all shadow-sm hover:shadow-md">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                                Học trên Web
+                            </a>
 
-                        <a href="https://t.me/{{ $botUsername }}?start=learn_{{ $lesson->id }}" target="_blank"
-                            class="text-blue-600 font-semibold text-sm hover:text-blue-800 inline-flex items-center group">
-                            Start Learning
-                            <svg class="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none"
-                                stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                            </svg>
-                        </a>
+                            <!-- Learn on Telegram Button -->
+                            <a href="https://t.me/{{ $botUsername }}?start=learn_{{ $lesson->id }}" target="_blank"
+                                class="flex-1 bg-white hover:bg-gray-50 text-blue-600 font-semibold text-sm py-2.5 px-4 rounded-lg inline-flex items-center justify-center group transition-all border-2 border-blue-600">
+                                <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z" />
+                                </svg>
+                                Telegram
+                            </a>
+                        </div>
                     </div>
                 </div>
             @empty

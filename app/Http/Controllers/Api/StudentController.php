@@ -290,4 +290,86 @@ class StudentController extends Controller
             'data' => $sessions,
         ]);
     }
+
+    /**
+     * Get segment details
+     * GET /api/student/segments/{id}
+     */
+    public function getSegment(int $id)
+    {
+        $segment = \App\Models\LessonSegment::with(['questions', 'lesson'])
+            ->findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'segment' => [
+                    'id' => $segment->id,
+                    'order' => $segment->order,
+                    'content' => $segment->content,
+                    'ai_explanation' => $segment->ai_explanation,
+                    'audio_url' => $segment->audio_url,
+                    'questions' => $segment->questions->map(function ($q) {
+                        return [
+                            'id' => $q->id,
+                            'question_text' => $q->question_text,
+                            'type' => $q->type,
+                            'options' => $q->options,
+                            'difficulty' => $q->difficulty,
+                        ];
+                    }),
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Chat with AI about lesson content
+     * POST /api/student/chat
+     */
+    public function chatWithAI(Request $request)
+    {
+        $request->validate([
+            'message' => 'required|string|max:1000',
+            'lesson_id' => 'required|exists:lessons,id',
+            'segment_id' => 'nullable|exists:lesson_segments,id',
+        ]);
+
+        try {
+            $lesson = \App\Models\Lesson::findOrFail($request->lesson_id);
+            $segment = $request->segment_id
+                ? \App\Models\LessonSegment::findOrFail($request->segment_id)
+                : null;
+
+            // Build context for AI
+            $context = "Bài học: {$lesson->title}\n";
+            $context .= "Môn học: {$lesson->subject}\n";
+            $context .= "Cấp độ: {$lesson->level}\n\n";
+
+            if ($segment) {
+                $context .= "Nội dung phần học hiện tại:\n";
+                $context .= $segment->ai_explanation ?? $segment->content;
+                $context .= "\n\n";
+            }
+
+            $context .= "Câu hỏi của học sinh: {$request->message}\n\n";
+            $context .= "Hãy trả lời câu hỏi một cách rõ ràng, dễ hiểu và khuyến khích học sinh. Sử dụng ví dụ cụ thể nếu cần.";
+
+            // Call LLM Service
+            $llmService = app(\App\Services\AI\LLMService::class);
+            $response = $llmService->chat($context);
+
+            return response()->json([
+                'success' => true,
+                'response' => $response,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể kết nối với AI. Vui lòng thử lại!',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }

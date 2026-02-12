@@ -54,6 +54,12 @@ Route::middleware('auth:sanctum')->group(function () {
         // Assigned lessons
         Route::get('/lessons/assigned', [StudentController::class, 'getAssignedLessons']);
 
+        // Segments (for web learning interface)
+        Route::get('/segments/{id}', [StudentController::class, 'getSegment']);
+
+        // AI Chat
+        Route::post('/chat', [StudentController::class, 'chatWithAI']);
+
         // Learning sessions
         Route::post('/sessions/start', [StudentController::class, 'startSession']);
         Route::get('/sessions', [StudentController::class, 'getMySessions']);

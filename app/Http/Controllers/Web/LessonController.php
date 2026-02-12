@@ -151,4 +151,20 @@ class LessonController extends Controller
 
         return view('lessons.telegram_redirect', compact('link', 'lesson'));
     }
+
+    /**
+     * Show learning interface
+     */
+    public function learn(Lesson $lesson)
+    {
+        // Load segments with questions
+        $lesson->load([
+            'segments' => function ($query) {
+                $query->orderBy('order');
+            },
+            'segments.questions'
+        ]);
+
+        return view('lessons.learn', compact('lesson'));
+    }
 }

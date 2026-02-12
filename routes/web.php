@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\LessonController;
+use App\Http\Controllers\Web\LearningController;
+use App\Http\Controllers\Web\StudentController;
 use App\Http\Controllers\Web\AiLogController;
 use App\Http\Controllers\Web\SegmentController;
 use App\Http\Controllers\Web\QuestionController;
@@ -18,17 +20,33 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 
 // Private Routes
 Route::middleware('auth')->group(function () {
-    // Default Home -> Dashboard
+    // Default Home -> Dashboard (role-based)
     Route::get('/', function () {
+        if (auth()->user()->role === 'student') {
+            return redirect()->route('student.dashboard');
+        }
         return redirect()->route('dashboard');
     });
 
-    // Dashboard
+    // General Dashboard (Admin/Teacher)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Student Dashboard
+    Route::get('/student/dashboard', [StudentController::class, 'dashboard'])
+        ->name('student.dashboard')
+        ->middleware('role:student');
 
     // Lessons (Student + Teacher)
     Route::get('/lessons', [LessonController::class, 'index'])->name('lessons.index');
     Route::get('/lessons/{lesson}/telegram', [LessonController::class, 'telegramLink'])->name('lessons.telegram');
+
+    // Learning Interface (Student)
+    Route::get('/lessons/{lesson}/learn', [LessonController::class, 'learn'])->name('lessons.learn');
+
+    // Learning AJAX Endpoints (Session-based auth)
+    Route::get('/learning/segments/{id}', [LearningController::class, 'getSegment'])->name('learning.segment');
+    Route::post('/learning/chat', [LearningController::class, 'chat'])->name('learning.chat');
+    Route::post('/learning/answer', [LearningController::class, 'submitAnswer'])->name('learning.answer');
 
     // Teacher/Admin Only - Create/Edit Lessons
     Route::middleware('role:admin,teacher')->group(function () {
